@@ -1,0 +1,188 @@
+{% extends "::base.html.twig" %}
+
+{% block page_title %}Accueil{% endblock %}
+
+{% block menu_etudiant %}
+    {% if is_granted('ROLE_ADMIN') %}
+		<li><a href="{{ path('mb_csv_export')}}">Exporter les vœux des étudiants</a></li>
+	{% endif %}
+{% endblock %}
+
+{% block content %}
+<script>
+var mailList ={};
+var newsList = [];
+
+</script>
+
+<div class="container">
+	<table class="align">		
+		{% if is_granted('ROLE_SUPER_ADMIN') %}
+			<td>
+			<form action="{{ path('mb_change_department')}}" method="POST">
+				<select name="departmentId">
+					{% for department in departments %}
+						<option value="{{department.id}}" {%if department.id == app.user.department.id %} selected="selected" {%endif%} >{{department.name}}</option>
+					{%endfor%}
+				</select>
+				<input type="submit" value="Charger">
+			</form>
+			</td>
+		{% endif %}	
+			<td>	
+			<form action="{{ path('mb_home_page_admin')}}" method="POST">
+				<input type="submit" value="Voir aussi les élèves inactifs">
+			</form>
+			</td><td>
+			<input type="submit" value="Afficher les mails des élèves visibles" id="seeMail"><textarea onclick="this.select()" id="mail" style="display:none;"></textarea>
+			</td>
+	</table>
+	
+	<div class="alert alert-warning" id="news" style="display:none;">
+		<h4>
+			<span class="glyphicon glyphicon-warning-sign" aria-hidden="true"></span>
+			Attention !
+		</h4>
+		<h4>Learning Agreements ou Fichiers Uploader par : </h4>
+		<ul class="list-inline" id="newsList">
+		</ul>
+	</div>
+	
+	
+
+	<div>
+		<table id="table" class="table table-hover">
+			<thead>
+				<tr>
+					<th>Nom</th>
+					<th>Prénom</th>
+					<th>Année</th>
+					<th>Moyenne</th>
+					<th>Pays</th>
+					<th>Université</th>
+					<th>Période</th>
+					<th>Année de l'affectation</th>
+					<th>Changement</th>
+					<th>Acceder</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for iterator, user in listUsers %}
+				<tr name="userMail" id="{{user.id}}" style="">
+					<td>{{user.name}}</td>
+					<td>{{user.firstName}}</td>
+					<td>{{user.yearStudy}}</td>
+					{% if user.mean != -1 %}
+						<td>{{user.mean}}</td>
+					{% else %}
+						<td>
+							<span class="glyphicon glyphicon-warning-sign" aria-hidden="true"></span>
+							Pas de moyenne
+						</td>
+					{% endif %}
+
+					{% if not user.placement is null %}
+							<td>{{user.placement.place.university.country.name}}</td>
+							{% if user.placement.temp == 1 or user.placement.temp == 2  %}
+								<td class="danger" title="Affectation temporaire">
+									<a class="btn btn-default" role="button" href=" {{ path('mb_university_admin',{'university' :  user.placement.place.university.id}) }}">
+										{{ user.placement.place.university.name }}
+									</a>
+								</td>
+							{% elseif user.placement.temp == 0 %}
+								<td class="success" title="Affectation validée">
+									<a class="btn btn-default" role="button" href=" {{ path('mb_university_admin',{'university' :  user.placement.place.university.id}) }}">
+										{{ user.placement.place.university.name }}
+									</a>
+								</td>
+							{%endif%}
+							<td>{{user.placement.mobilityPeriod.type}}</td>
+							<td>{{user.placement.year.year}}/{{user.placement.year.year + 1}}</td>
+
+					{% else %}
+								<td>--</td>
+								<td>--</td>
+								<td>--</td>
+								<td>--</td>
+					{%endif%}
+
+					{%if user.isUpdate %}<td style="background-color:#F2050D">Oui</td> <script>newsList.push("<li class=\"list-group-item\"><a class=\"btn btn-default\" role=\"button\" href=\" {{ path('mb_home_page_user_admin',{'student' : user.id}) }}\">{{user.firstName}} {{user.name}}</a></li>");</script>{%else%}<td>Non</td>{%endif%}
+
+					<td><a class="btn btn-default" role="button" href=" {{ path('mb_home_page_user_admin',{'student' : user.id}) }}">Acceder</a></td>
+					
+					<script> mailList[{{user.id}}] = '{{user.email}}';</script>
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>	
+		
+		
+
+	
+	<script src="../../js/tablefilter/tablefilter.js"></script>
+
+	<script data-config>
+		var filtersConfig = {
+			base_path: '../../js/tablefilter/',
+			alternate_rows: true,
+			rows_counter: true,
+			btn_reset: true,
+			loader: true,
+			status_bar: true,
+			mark_active_columns: true,
+			highlight_keywords: true,
+			col_widths: [
+				'100px', '100px', '70px',
+				'70px', '180px', '180px',
+				'180px', '180px', '180px','0px'
+			],col_number_format: [
+			null, null,
+			'US', 'US', null,
+			null,null,null,null,null,null,null
+			],
+			extensions:[{ name: 'sort' }]
+		};
+
+		var tf = new TableFilter('table', filtersConfig);
+		tf.init();
+
+	</script>	 
+	
+	<script>
+		var element = document.getElementById('seeMail');
+		var mail = document.getElementById('mail');
+
+		element.addEventListener("click", function() {
+			var td = document.getElementsByName("userMail");
+			mail.style.width="700px";
+			mail.style.height="250px";
+			mail.innerHTML = "";
+			mail.style.display = '';
+			var max = td.length;
+			for(i = 0; i<max;i++){
+				if( td[i].style.display != 'none'){
+					mail.innerHTML += mailList[td[i].id] + ',';
+				}
+			}
+			
+		});
+		
+		if(newsList.length !=0){
+			 element = document.getElementById("news");
+			element.style.display = '';
+			 element = document.getElementById("newsList");
+			for(var i in newsList){
+				element.innerHTML += newsList[i];
+			}
+		
+		}
+		
+		
+	</script>
+		
+		
+
+	</div>
+{% endblock %}
+

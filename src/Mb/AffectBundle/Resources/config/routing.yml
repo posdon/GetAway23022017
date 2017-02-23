@@ -1,0 +1,3 @@
+mb_affect_homepage:
+    path:     /hello/{name}
+    defaults: { _controller: MbAffectBundle:Default:index }

@@ -1,0 +1,51 @@
+{% extends "base.html.twig" %}
+
+{% block content %}
+
+
+    <div class="row">
+        <div class="col-md-10 col-md-offset-1">
+
+
+            {% if error %}
+                <div class="alert alert-danger">{{ error.message }}</div>
+            {% endif %}
+
+             <div class="panel panel-default">
+                <div class="panel-heading">            
+                    <div class="row">
+                        <div class="col-md-10 col-md-offset-1">
+                            <h3>Portail de Gestion des mobilités</h3>
+                            
+                        </div>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div class="row">
+                        <div class="col-md-4 col-md-offset-1">
+                            <p>
+                                Vous pouvez utiliser ici vos identifiants INSA habituels pour vous connecter.
+                            </p>
+                            <img src="{{ asset('images/logo-insa.jpg') }}" width="100%" height="100%" alt="Logo INSA Rennes" class="pull-left">
+                        </div>
+                        <div class="col-md-4 col-md-offset-1">
+                            <form class="form-horizontal" action="{{ path('login_check') }}" method="post">
+                                <div class="form-group">
+                                    <label for="username">Identifiant :</label>
+                                    <input type="text" class="form-control" id="username" name="_username" value="{{ last_username }}" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="password">Mot de passe :</label>
+                                    <input type="password" class="form-control" id="password" name="_password" />
+                                    <br />
+                                </div>
+                                <input type="submit" class="btn btn-default" value="Connexion" />
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}

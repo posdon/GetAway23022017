@@ -1,0 +1,155 @@
+{% extends "::base.html.twig" %}
+
+
+{% block content %}
+	<div class="container">
+		<h1>Liste des voeux</h1>
+
+		{% if is_granted('ROLE_ADMIN') %}
+
+			<ul class="nav nav-pills">
+			<li role="presentation">
+			<!--Choix de l'algorithme-->
+				<form method="POST" action="{{ path('mb_run_algo') }}">
+					<select name="algo">
+							<option value="0" {%if app.user.department.algo == 0 %} selected="selected" {%endif%} >4 et 3 alterné</option>
+							<option value="1" {%if app.user.department.algo == 1 %} selected="selected" {%endif%} >4 puis 3</option>
+					</select>
+					<input type="submit" class="btn btn-primary" value="Lancer la procédure d'affectation">
+				</form>
+			</li>
+			<li role="presentation">
+			{% if app.user.department.bolt == false %}
+				<form method="POST" action="{{ path('mb_bolt_true') }}" >
+					<input type="submit" class="btn btn-danger" value="Verrouiller les voeux des étudiants">
+				</form>
+				{% else %}
+				<form method="POST" action="{{ path('mb_bolt_false') }}" >
+					<input type="submit" class="btn btn-success" value="Déverrouiller les voeux des étudiants">
+				</form>
+			{%endif%}
+			</li>
+			</ul>
+			<br>
+				<a class="btn btn-default" role="button" href="{{ path('mb_run_algo') }}"  >Voir les affectations actuels</a>
+
+			<br>
+			<br>
+		{% endif %}
+		
+	</div>	
+		
+
+	<table id="table" class=" table-hover container-fluid">
+	    <thead>
+
+		<tr>
+			<th>ID</th>
+			<th>Nom</th>
+			<th>Prénom</th>
+			<th>Année</th>
+			{% if is_granted('ROLE_ADMIN') %}
+				<th>Moyenne</th>
+			{% endif %}
+			<th>Voeux 1</th>
+			<th>Voeux 2</th>
+			<th>Voeux 3</th>
+			<th>Affectation Temporaire</th>
+
+			{% if is_granted('ROLE_ADMIN') %}
+				<th>Acceder</th>
+			{% endif %}
+		</tr>
+
+    </thead>
+    <tbody>
+
+	  {% for i, user in listStudents %}
+		<!--Surligne la ligne si c'est l'utilisateur courant -->
+			{%if  app.user.id == user.id %}
+				<tr id="{{user.id}}" style="background-color:#CDFF9A;">
+			{%else%}
+				<tr>
+			{%endif%}
+				<td>{{i}}</td>
+				<td>{{user.name}}</td>
+				<td>{{user.firstName}}</td>
+				<td>{{user.yearStudy}}</td>	
+				{% if is_granted('ROLE_ADMIN') %}					
+					{% if user.mean != -1 %}
+						<td>{{user.mean}}</td>
+					{% else %}
+						<td>
+							<span class="glyphicon glyphicon-warning-sign" aria-hidden="true"></span>
+							Pas de moyenne
+						</td>
+					{% endif %}
+				{% endif %}
+
+				{%for i in 0..2 %}
+					<td>
+						{% if user.wishes[i] is defined %}
+								<a class="btn btn-default" role="button" href=" {{ path('mb_university_student',{'university' :  user.wishes[i].place.university.id}) }}">
+										{{ user.wishes[i].place.university.name }} {{ user.wishes[i].mobilityPeriod.type }}
+								</a>
+						{%endif%}
+					</td>
+				{% endfor %}
+
+	
+				{% set test = true %}
+				{% if not user.placement is null %}
+							<td>
+								<a class="btn btn-primary" role="button" href=" {{ path('mb_university_student',{'university' : user.placement.place.university.id}) }}">
+									{{ user.placement.place.university.name }}  {{ user.placement.mobilityPeriod.type }}
+								</a>
+							</td>
+							{% set test = false %}
+				{% else %}
+						<td>--</td>
+				{%endif%}
+		
+				
+				
+				
+				{% if is_granted('ROLE_ADMIN') %}
+					<td><a class="btn btn-default" role="button" href=" {{ path('mb_home_page_user_admin',{'student' : user.id}) }}">Accéder à l'étudiant</a></td>
+				{% endif %}
+			</tr>
+	 {% endfor %}
+	     </tbody>
+
+	 </table>
+	 
+	 
+	 
+<script src="../../../js/tablefilter/tablefilter.js"></script>
+
+<script data-config>
+    var filtersConfig = {
+        base_path: '../../../js/tablefilter/',
+        alternate_rows: true,
+        rows_counter: true,
+        btn_reset: true,
+        loader: true,
+        status_bar: true,
+        mark_active_columns: true,
+       single_filter:true,
+		col_number_format: [
+		null, null,
+		'US', 'US', null,
+		null,null,null,null
+		],
+        extensions:[{ name: 'sort' }]
+    };
+
+    var tf = new TableFilter('table', filtersConfig);
+    tf.init();
+
+</script>	 
+	 
+	 
+	 
+	 
+	 
+{% endblock %}

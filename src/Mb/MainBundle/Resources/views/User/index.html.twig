@@ -1,0 +1,451 @@
+{% extends "::base.html.twig" %}
+
+{% block page_title %}Accueil des étudiants{% endblock %}
+
+{% block content %}
+{% if not is_granted('ROLE_ADMIN') and user.id == 123 %}
+<div style="background:pink;"class="container">
+{% else %}
+<div class="container">
+{% endif %}
+
+<!-- ENCART BIENVENUE -->
+<div class="jumbotron">
+    {% if is_granted('ROLE_ADMIN') %}
+    <div class="bs-example">
+    <div class="panel-group" id="accordion">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h4 class="panel-title">
+                    <a data-toggle="collapse" data-parent="#accordion" href="#collapseOne">Information</a>
+                </h4>
+            </div>
+            <div id="collapseOne" class="panel-collapse collapse in">
+                <div class="panel-body">
+    <h2>{{user.name}} {{user.firstName}}</h2>
+	<form method="POST" action="{{ path('mb_delete_user') }}">
+			<input type="hidden" name="userId" value="{{user.id}}">
+			<button class="submit btn btn-danger" name="action" onclick="return confirm('Êtes-vous sûr?\nL\'étudiant sera supprimé ainsi que toutes les informations qui lui sont associés')" value="delete">Supprimer l'étudiant</button>						
+		</form>
+    {% else %}
+    <h1>Bienvenue !</h1>
+        <p>
+        Vous êtes sur le site de gestion des semestres d'étude à l'étranger de l'INSA Rennes.</br>
+        Vous êtes authentifié en tant que {{user.name}} {{user.firstName}}.
+        </p>
+    {% endif %}
+</div>
+
+<div>
+	<p>
+		{% if is_granted('ROLE_ADMIN') %}
+			<a href="{{ path('Mb_univ_list_admin',{'studentId' : user.id}) }}"  class="btn btn-default">Faire un voeux</a>
+		{% else %}	
+			<a href="{{ path('Mb_univ_list') }}" class="btn btn-default">Faire un voeux</a>
+		{% endif %}
+		<a href="{{ path('mb_student_affect') }}"  class="btn btn-default">Voeux des autres étudiants</a>
+	</p>
+
+{% if user.department.bolt %}
+    <div class="alert alert-warning">
+        <h4>
+            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+            Attention !
+        </h4>
+        Un administrateur a verrouillé la liste des vœux. Vous ne pouvez plus ajouter, supprimer ou modifier l'ordre de vos vœux.
+    </div>
+{% endif %}
+
+<!-- VOEUX -->
+<table class="table table-hover">
+    <tr>
+        <th>Classement</th>
+        <th>Université</th>
+        <th>Semestre de départ</th>
+        <th>Pays</th>
+		<!--Si déjà affecté avec temp 0, on ne peux pas modifier les voeux -->
+        {% if (is_granted('ROLE_ADMIN') or not(user.department.bolt) ) and  (user.placement is null or user.placement.temp != 0)%}
+            <th>Changer l'ordre des vœux</th>
+            <th>Supprimer</th>
+			{% if is_granted('ROLE_ADMIN') and  (user.placement is null or user.placement.temp != 0)%}
+				<th>Affecter</th>
+			 {% endif %}
+        {% endif %}
+    </tr>
+    {% for iterator, wish in wishes %}
+        <tr>
+            <td>{{wish.priority}}</td>
+            <td>
+				<a class="btn btn-default" role="button" href=" {{ path('mb_university_student',{'university' :  wish.place.university.id}) }}">			
+					{{wish.place.university.name}}
+				</a>
+			</td>
+            <td>{{wish.mobilityPeriod.type}}</td>
+            <td>{{wish.place.university.country.name}}</td>
+            {% if (is_granted('ROLE_ADMIN') or not(user.department.bolt) ) and  (user.placement is null or user.placement.temp != 0)%}
+                <td>
+                    <ul class="nav nav-pills">
+                        <li role="presentation">
+                            <form method="POST" action="{{ path('mb_home_page_user_wish_up') }}">
+                                <input type="hidden" name="id" value="{{wish.id}}">
+                                <button class="btn btn-default"><i class="glyphicon glyphicon-arrow-up"></i>
+                                </button>
+                            </form>
+                        </li>
+                        <li role="presentation">
+                            <form method="POST" action="{{ path('mb_home_page_user_wish_down') }}">
+                                <input type="hidden" name="id" value="{{wish.id}}">
+                                <button class="btn btn-default"><i class="glyphicon glyphicon-arrow-down"></i>
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </td>
+                <td>
+                    <form method="POST" action="{{ path('mb_home_page_user_delete') }}">
+                        <input type="hidden" name="id" value="{{wish.id}}">
+                        <button class="btn btn-danger"><i class="glyphicon glyphicon-trash"></i></button>
+                    </form>
+                </td>
+				 {% if is_granted('ROLE_ADMIN') and  (user.placement is null or user.placement.temp != 0)%}
+					<td>
+						<form method="POST" action="{{ path('mb_affect_wish') }}">
+							<input type="hidden" name="id" value="{{wish.id}}">
+							<input type="hidden" name="userid" value="{{user.id}}">
+							<input type="submit" class="btn btn-primary" value="Affecter/Désaffecter">
+						</form>
+					</td>
+				{% endif %}
+        {% endif %}
+        </tr>
+    {% endfor %}
+</table>
+                </div>
+            </div>
+        </div>
+<div class="panel panel-default">
+            <div class="panel-heading">
+                <h4 class="panel-title">
+                    <a data-toggle="collapse" data-parent="#accordion" href="#collapseTwo">Affectation</a>
+                </h4>
+            </div>
+            <div id="collapseTwo" class="panel-collapse collapse in">
+                <div class="panel-body">
+	<div class="row jumbotron">
+	
+		<div class="col-md-8">
+			<h3>Affectation</h3>
+			{% if not user.placement is null %}
+			
+				<!--intitulé différent si admin ou user-->
+				{% if is_granted('ROLE_ADMIN') %}
+					{% if user.placement.temp == 1  %}
+						<p>Cet étudiant a été affecté manuellement à :</p>
+					{% elseif user.placement.temp == 2 %}
+						<p>Cet étudiant a été affecté par l'algorithme à :</p>
+					{% elseif user.placement.temp == 0 %}
+						<p>Cet étudiant est affecté à :</p>
+					{% endif %}
+				{% else %}
+					{% if user.placement.temp == 1 or  user.placement.temp == 2 %}
+						<p>Vous avez été affecté temporairement à cette université : </p>
+					{% elseif user.placement.temp == 0 %}
+						<p>Vous êtes affecté définitivementà cette université, vous pouvez désormais déposer un contrat d'étude (learning agreement)</p>
+					{% endif %}		
+				{% endif %}
+				
+				<a class="btn btn-default" role="button" href=" {{ path('mb_university_student',{'university' :  user.placement.place.university.id}) }}">
+					{{ user.placement.place.university.name }}  {{ user.placement.mobilityPeriod.type }}
+				</a>
+				<br/>
+				<br/>
+				
+				{% if is_granted('ROLE_ADMIN') %}
+					<form method="POST" action="{{ path('mb_affect_delete_validate_placement') }}">
+						<input type="hidden" name="id" value="{{user.placement.id}}">
+						{% if user.placement.temp == 1 or user.placement.temp == 2 %}
+							<button class="submit btn btn-success" name="action" value="validate">Valider par la commission RI</button>
+						{% endif %}
+							<button class="submit btn btn-danger" name="action" value="delete" onclick="return confirm('Êtes-vous sûr?\nLe placement sera supprimé avec tout les Learning agreement associés')">Supprimer</button>
+					</form>
+				{% endif %}					
+			{% else %}
+				Non affecté
+			{%endif%}
+		</div>
+		
+		<!-- PARTIE ADMIN -->
+		{% if is_granted('ROLE_ADMIN') %}
+		<div>
+			<h3>Modifier la moyenne</h3>
+			<form method="POST" action="{{ path('mb_user_mean') }}">
+				<input type="hidden" name="id" value="{{user.id}}">
+				<input class="span2" id="mean" name="mean" type="number" min=0 max=20 step=0.01 value={{user.mean}}>
+				<button class="submit"><i class="glyphicon glyphicon-ok"></i></button>
+			</form>
+		</div>	
+		{% endif %}
+	</div>
+	
+	{% if is_granted('ROLE_ADMIN') %}
+	<div class="jumbotron" style="">
+		<h3>Commentaires sur l'élève (Invisible de celui-ci)</h3>
+		<form method="POST" action="{{ path('mb_user_com') }}">
+				<input type="hidden" name="id" value="{{user.id}}">		
+				<textarea  name="com" style="height:200px; width : 500px;">{{user.com}}</textarea>
+				<button class="submit"><i class="glyphicon glyphicon-ok"></i></button>
+		</form>
+	</div>
+	{% endif %}
+		
+		 </div>
+            </div>
+        </div>
+<div class="panel panel-default">
+            <div class="panel-heading">
+                <h4 class="panel-title">
+                    <a data-toggle="collapse" data-parent="#accordion" href="#collapseTree">Upload Documents</a>
+                </h4>
+            </div>
+            <div id="collapseTree" class="panel-collapse collapse in">
+                <div class="panel-body">
+<!-- UPLOAD FICHIER -->		
+	<div class="row jumbotron" style="">	
+		<h3>Upload de documents PDF</h3>
+		<div class="col-lg-4">
+			<form  action="" method="post" {{ form_enctype(form) }}>
+				Choisissez le fichier à envoyer (10Mo max) :<br>
+				<div class="form-group">
+					{{ form_widget(form) }}
+					<button type="submit" class="btn btn-default">Envoyer</button>
+				</div>
+			</form>
+			<ul>
+				{% for i, file in user.filesSend %}
+					<li><a href="{{ asset(file.getWebPath) }}" target="_blank">{{file.name}} : {{ file.getAncientName }}</a>  {{ file.date|date('d-m-Y') }}
+						<form method="POST" action="{{ path('mb_delete_file') }}">
+							<input type="hidden" name="id" value="{{file.id}}">		
+							<button class="submit">Supprimer</button>
+						</form>
+					</li>
+				{% endfor %}	
+			</ul>
+		</div>
+	</div>
+
+
+  </div>
+            </div>
+        </div>
+<div class="panel panel-default">
+            <div class="panel-heading">
+                <h4 class="panel-title">
+                    <a data-toggle="collapse" data-parent="#accordion" href="#collapseFour">Contrat d'étude</a>
+                </h4>
+            </div>
+            <div id="collapseFour" class="panel-collapse collapse in">
+                <div class="panel-body">
+
+<!-- LEARNING AGREEMENT -->
+{% if not user.placement is null %}
+{% if user.placement.temp == 0 %}
+<div class="jumbotron">
+	{% set toValidate = null %}
+	{% for i, agreement in user.placement.agreements %}
+		<div class="">
+		{% set validate = true %}
+		
+		<!--learning agreement en attente de validation-->
+		{% if not agreement.validate %}
+			{% set toValidate = agreement %}
+			{% set validate = false %}
+
+			<h3>Choix en attente de validation</h3>
+			{% if not agreement.com is null %}
+				<p class="alert alert-danger">Réfusé, {{agreement.com}} </p>
+			{%endif%}
+			{% if is_granted('ROLE_ADMIN') %}
+				<form method="POST" action="{{ path('mb_accept_agreement') }}">
+			{% else %}
+				<form method="POST" action="{{ path('mb_delete_agreement') }}">
+			{% endif %}
+	            <input type="hidden" name="id" value="{{agreement.id}}">	
+	            <input type="hidden" name="iduser" value="{{user.id}}">						
+			{% if is_granted('ROLE_ADMIN') %}
+				<button class="submit btn btn-success" name="action" value="validate">Valider</button>
+				<button class="submit btn btn-danger" name="action" value="negate">Refuser</button>
+				<textarea  name="com" style="width : 350px;" placeholder="Raison du refus"></textarea>
+			{% else %}
+				<button class="submit btn btn-danger">Annuler</button>
+			{% endif %}
+			
+			</form>
+			
+		<!--learning agreement validé-->
+		{% else %}
+			<table class="align">
+			<td><h3>Choix validé</h3></td>
+			{% if is_granted('ROLE_ADMIN') %}
+			<td>
+				<form method="POST" action="{{ path('mb_delete_agreement') }}">
+					<input type="hidden" name="id" value="{{agreement.id}}">	
+					<input type="hidden" name="iduser" value="{{user.id}}">		
+					<button class="submit btn btn-danger">Supprimer</button>
+				</form>
+			</td>
+			{% endif%}
+			</table>
+		{% endif %}
+		<br/>
+			<form method="POST" action="{{ path('mb_set_marks') }}">
+				<input type="hidden" name="iduser" value="{{user.id}}">		
+				{% if is_granted('ROLE_ADMIN') and agreement.validate %}<textarea  name="com" style="width : 350px;" placeholder="Commentaires">{{agreement.com}}</textarea>{% endif %}		
+				<table class="table">				
+					<tr>
+						<th>Matière</th>
+						{%if agreement.isECTS%}<th>Crédit ECTS</th>{%else%}<th>Crédits de l'université</th>{%endif%}
+						{%if validate %}
+							<th>Notes</th>
+							{% if is_granted('ROLE_ADMIN') %}<th>Validé</th>{%endif%}
+						{%endif%}
+					</tr>
+					
+					{%set totalCredit = 0%}
+					{%set validerCredit = 0%}
+					{%set counter = 0%}
+					{% for j, subject in agreement.subjects %}
+						{%set totalCredit = totalCredit + subject.ects%}
+						{%set counter = counter+1%}
+						<tr>
+							<td>{{subject.name}}</td>
+							<td>{{subject.ects}}</td>
+							{%if validate %}
+							<td><input name="mark{{j}}" value="{%if not subject.mark is null %}{{subject.mark}}{%endif%}"></td>
+								{% if is_granted('ROLE_ADMIN') %}<td><input name="validate{{j}}[]" type="checkbox" {%if subject.validate %}checked {%set validerCredit = validerCredit + subject.ects%}{%endif%}></td>{%endif%}							
+							{%endif%}
+								<input type="hidden" name="subject{{j}}" value="{{subject.id}}">						
+						</tr>
+					{% endfor %}	
+					
+					<input type="hidden" name="counter" value="{{counter}}">						
+				</table>
+				{%if validate %}<button class="submit btn btn-default">Valider</button>{%endif%}
+			</form>
+			{% if is_granted('ROLE_ADMIN') %}<p>Ce contrat d'étude a {{validerCredit}}/{{totalCredit}} crédits validés</p>{%else%}<p>Ce contrat d'étude a {{totalCredit}} crédits</p>{%endif%}
+		</div>
+		
+	{% endfor %}
+	
+	<!--Proposer un learning agreement-->
+	<div class="">
+		{% if is_granted('ROLE_ADMIN') %}
+			<h3>Mettre contrat d'étude</h3>
+			<form method="POST" action="{{ path('mb_set_agreement') }}">
+		{%else%}
+			<h3>Soumettre un contrat d'étude</h3>
+			<form method="POST" action="{{ path('mb_submit_agreement') }}">
+		{%endif%}	
+			<select name="typeCredit">
+				<option value="0" {%if not toValidate is null and not toValidate.isECTS%}selected="selected"{%endif%}>Crédits de l'université</option>
+				<option value="1"  {%if not toValidate is null and toValidate.isECTS%}selected="selected"{%endif%}>Crédits ECTS</option>
+			</select>
+			<table id="table" class="table">
+				<thead>
+					<tr>
+						<th>Matière</th>
+						<th>Crédits</th>
+					</tr>
+				</thead>
+				<tbody id="body">
+				{%set counter = 0%}
+				{%for i in 0..5 %}
+					<tr>
+						<td><input type="text" name="name{{i}}" id="name{{i}}" value="{%if not toValidate is null and toValidate.subjects[i] is defined %}{{toValidate.subjects[i].name}}{%endif%}"></td>
+						<td><input type="number" name="ects{{i}}" id="ects{{i}}"  min=0  step=0.1 value="{%if not toValidate is null and toValidate.subjects[i] is defined %}{{toValidate.subjects[i].ects}}{%endif%}"></td>
+					</tr>
+					{%set counter = counter+1%}
+				{%endfor%}
+				
+				{% if not toValidate is null %}
+					{%for i, subjects in toValidate.subjects if i > 5%}
+						<tr>
+							<td><input type="text" name="name{{i}}" id="name{{i}}" value="{%if not toValidate is null and toValidate.subjects[i] is defined %}{{toValidate.subjects[i].name}}{%endif%}"></td>
+							<td><input type="number" name="ects{{i}}" id="ects{{i}}"  min=0  step=0.1 value="{%if not toValidate is null and toValidate.subjects[i] is defined %}{{toValidate.subjects[i].ects}}{%endif%}"></td>
+						</tr>
+						{%set counter = counter+1%}
+					{%endfor%}
+				{%endif%}
+				</tbody>
+			</table>
+			
+				<input id="counter" type="hidden" name="counter" value="{{counter}}">	
+
+			{% if is_granted('ROLE_ADMIN') %}
+				<input type="hidden" name="iduser" value="{{user.id}}">						
+				<button class="submit btn btn-default">Valider</button>
+			{%else%}
+				<button class="submit btn btn-default">Soumettre</button>
+			{%endif%}				
+		</form>
+		<input type="submit" id="addSub" value="Rajouter une ligne">
+	</div>
+</div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endif %}
+
+
+		
+
+
+{% if not is_granted('ROLE_ADMIN') and user.id == 123 %}
+<img style="margin-left:25%;" src="http://www.canailleblog.com/photos/blogs/recherche-763305.gif"/>
+{%endif%}
+      </div>
+</div>
+
+		
+		
+		
+<script>
+	var counter= document.getElementById('counter');
+	var i =parseInt(counter.value);
+
+	var element = document.getElementById('addSub');
+	element.addEventListener('click', (function() {
+
+			var body = document.getElementById('body');
+			var name = [];
+			var ects = [];
+			for(var j = 0; j<i;j++){
+				name.push(document.getElementById('name'+j).value);
+				ects.push(document.getElementById('ects'+j).value);			
+			}
+			
+			
+			body.innerHTML += '<tr>'+
+						'<td><input type="text"  id="name'+i+'"  name="name'+i+'"></td>'+
+						'<td><input type="number"  id="ects'+i+'"  name="ects'+i+'"  min=0  step=0.01 ></td>'+
+					'</tr>';
+			
+			for(var j = 0; j<i;j++){
+				document.getElementById('name'+j).value=name[j];
+				document.getElementById('ects'+j).value=ects[j];
+			
+			}			
+					
+					
+					
+			i++;
+			var counter= document.getElementById('counter');
+			counter.value = i;
+		}), false);
+	
+
+</script>
+
+{% endblock %}
+

@@ -1,0 +1,156 @@
+{% extends "::base.html.twig" %}
+{% block menu_autre %}
+<a class="btn btn-primary navbar-btn" title="Imprimer" href="#" OnClick="javascript:window.print()"><span class="glyphicon glyphicon-print" /></a>
+{% endblock %}
+{% block content %}
+<div class="container">
+	
+	<!-- Filtre -->
+	<form action="{{ path('mb_jury')}}" method="POST" id="form">
+		<label form="form" for="period">Période de départ : </label>
+		<select id="period" name="period">
+			<option value="3" {% if periode=="3" %}selected="selected"{% endif %}>S7 & S8</option>
+			<option value="4" {% if periode=="4" %}selected="selected"{% endif %}>S9 & S10</option>
+			<option value="5" {% if periode=="5" %}selected="selected"{% endif %}>Double diplôme</option>
+		</select>
+
+		<label form="form" for="year">Année du voeux : </label>
+
+		<select name="year" id="year">
+			{% for year in years %}
+			<option value="{{year.id}}" {% if annee==year.id %}selected="selected"{% endif %}>{{year.year}}/{{year.year + 1}}</option>
+			{%endfor%}
+		</select>
+		<input type="submit" value="Générer">
+	</form>
+	<!--RECAP -->
+	<table id="table" class="table table-hover table-bordered table-condensed">
+		<thead>
+			<tr>
+				<th>ID</th>
+				<th>Nom</th>
+				<th>Prénom</th>
+				<th>Année</th>
+				<th>Pays</th>
+				<th>Etablissement</th>
+				<th>Type Crédit</th>
+				<th>Validation</th>
+			</tr>
+		</thead>
+		<tbody>
+
+			{% for i, user in listStudents %}
+			{% if not user.placement is null and  user.placement.temp == 0  %}							
+			<tr>
+				<td><a class="btn btn-default" role="button" href=" {{ path('mb_home_page_user_admin',{'student' : user.id}) }}" title="Acceder">{{i}}</a></td>
+				<td>{{user.name}}</td>
+				<td>{{user.firstName}}</td>
+				<td>{{user.yearStudy}}</td>	
+				<td>{{user.placement.place.university.country.name}}</td>
+				<td>{{user.placement.place.university.name}} {{user.placement.mobilityPeriod.type}}</td>
+
+				{%set test = true%}		
+				{% for i, agreement in user.placement.agreements %}	
+				{%if agreement.validate%}
+				<td>{%if agreement.isECTS%}Crédit ECTS{%else%}Crédits de l'université{%endif%}</td>
+
+				{%set totalCredit = 0%}
+				{%set validerCredit = 0%}
+				{% for j, subject in agreement.subjects %}
+				{%set totalCredit = totalCredit + subject.ects%}
+				{%if subject.validate %}{%set validerCredit = validerCredit + subject.ects%}{%endif%}						
+				{% endfor %}	
+				<td> {{validerCredit}}/{{totalCredit}}</td>
+
+				{%set test = false%}		
+				{%endif%}
+				{%endfor%}
+
+				{%if test%}<td>--</td><td>--</td>{%endif%}
+
+			</tr>
+
+			{% endif %}
+			{%endfor%}
+		</tbody>
+	</table> 
+
+
+
+	<!--DETAILS -->
+	{% for i, user in listStudents %}
+	{% if not user.placement is null and  user.placement.temp == 0  %}
+	{% for k, agreement in user.placement.agreements %}	
+	{%if agreement.validate%}
+
+	{% if i%2== 0  %}
+	<br/>
+	<br/>
+	<table class="table jury"> <tr><td>
+	{%endif%}
+
+		<table  class="table table-hover table-responsive table-bordered table-condensed">
+			<thead>
+				<tr>
+					<th>{{i}} - {{user.name}} {{user.firstName}}</th>
+					<th>{{user.placement.place.university.country.name}}</th>
+					<th></th>
+				</tr>
+				<tr>
+					<th>Cours</th>
+					<th id="com{{user.id}}">Notes</th>
+					<th id="credit{{user.id}}"></th>
+				</tr>
+			</thead>
+			<tbody>
+				<script>
+					var element = document.getElementById('credit{{user.id}}');
+					element.innerHTML='{%if agreement.isECTS%}Crédit ECTS{%else%}Crédits de l\'université{%endif%}';
+
+					element = document.getElementById('com{{user.id}}');
+					element.innerHTML+='   {{agreement.com}}';
+				</script>	
+				
+
+				{%set totalCredit = 0%}
+				{%set validerCredit = 0%}
+
+				{% for j, subject in agreement.subjects %}
+				{%set totalCredit = totalCredit + subject.ects%}
+				{%if subject.validate %}{%set validerCredit = validerCredit + subject.ects%} <tr>{%else%}<tr class='danger' >{%endif%}	
+
+				<td>{{subject.name}}</td>
+				<td>{{subject.mark}}</td>
+				<td>{{subject.ects}}</td>
+
+			</tr>
+			{% endfor %}	
+
+			<tr>
+				<td></td>
+				<td></td>
+				<td>{{validerCredit}}/{{totalCredit}}</td>
+
+				{%endif%}
+				{%endfor%}
+			</tbody>
+			</table
+			{%endif%}
+
+			{% if i%2== 0  %}
+		</td><td>
+		{%endif%}
+		{% if i%2== 1  %}
+	</td></tr></table>
+	{%endif%}
+
+
+	{%endfor%}
+</div>
+
+
+
+
+
+
+{% endblock %}

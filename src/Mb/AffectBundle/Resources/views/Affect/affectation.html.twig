@@ -1,0 +1,458 @@
+{% extends "::base.html.twig" %}
+
+
+{% block content %}
+	<div class="container">
+		<ul class="nav nav-pills">		
+			<li role="presentation">
+				<!--Choix de l'algorithme-->
+				<form method="POST" action="{{ path('mb_run_algo') }}">
+					<select name="algo">
+							<option value="0" {%if app.user.department.algo == 0 %} selected="selected" {%endif%} >4 et 3 alterné</option>
+							<option value="1" {%if app.user.department.algo == 1 %} selected="selected" {%endif%} >4 puis 3</option>
+					</select>
+					<input type="submit" class="btn btn-primary" value="Lancer la procédure d'affectation">
+				</form>
+			</li>
+			
+			<li role="presentation">
+				<form method="POST" action="{{ path('mb_affect_all') }}">
+					<input type="submit" class="btn btn-warning" value="Verrouiller toutes ces affectations">
+				</form>
+			</li>
+			
+			<li role="presentation">
+				<form method="POST" action="{{ path('mb_desaffect_all') }}">
+					<input type="submit" class="btn btn-warning" value="Déverrouiller toutes les affectations verrouillée">
+				</form>
+			</li>
+
+
+			<li role="presentation">
+				{% if app.user.department.bolt == false %}
+					<form method="POST" action="{{ path('mb_bolt_true') }}">
+						<input type="submit" class="btn btn-danger" value="Bloquer la possibilité de modifier les voeux">
+					</form>
+					{% else %}
+					<form method="POST" action="{{ path('mb_bolt_false') }}">
+						<input type="submit" class="btn btn-success" value="Débloquer la possibilité de modifier les voeux">
+					</form>
+				{%endif%}
+			</li>
+		</ul>
+
+		<br>
+		<a class="btn btn-default" href="{{ path('mb_algo') }}" role="button" >Voir les voeux</a>
+		<br>
+		<br>
+		<p class="alert alert-warning">Pensez à lancer la procédure d'affectation après toute affectation manuelle pour vous assurer une cohérence des données</p>
+		
+		
+		<!--Problèmes de place avec certaines universitée-->
+		{%if listProblem[0] is defined%}
+			<div class="alert alert-danger">
+				<h4>
+					<span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+					Attention !
+				</h4>
+				<h4>Problèmes de nombre de places  avec : </h4>
+				<ul class="list-inline">
+				  {%for university in listProblem%}
+					<li class="list-group-item">
+						<a class="btn btn-default" role="button" href=" {{ path('mb_university_admin',{'university' : university.id}) }}">
+							{{ university.name }}  
+						</a>
+					</li>
+				  {%endfor%}
+				</ul>
+			</div>
+		{%endif%}	
+		
+		
+		
+		{%set voeux1 = 0%}
+		{%set voeux2 = 0%}
+		{%set voeux3 = 0%}
+		{%set autreVoeux = 0%}
+		{%set aucunVoeuxRetenu = 0%}
+		{%set noCorres = 0%}
+		{%set exclue = 0%}
+
+		<!-- LEGENDE + STATS-->
+		<table class="table table-hover table-bordered">
+			<thead>
+				<tr>
+					<th>1er voeux</th>
+					<th>2eme voeux</th>
+					<th>3eme voeux</th>
+					<th>Autre voeux</th>
+					<th>Aucun voeux retenu</th>
+					<th>Voeux non cohérent (semestre non disponible/voeux non présent)</th>
+					<th>Exclue de l'algorithme</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td style="background-color:#CDFF9A;"></td>
+					<td style="background-color:#FDFD7C;"></td>
+					<td style="background-color:#FFCB7E;"></td>
+					<td style="background-color:#FFA092;"></td>
+					<td style="background-color:#FE5F64;"></td>
+					<td style="background-color:#FF2121;"></td>
+					<td style="background-color:#BFFFF6;"></td>
+				</tr>
+				<tr>
+					<td id="voeux1">{{voeux1}}</td>
+					<td id="voeux2">{{voeux2}}</td>
+					<td id="voeux3">{{voeux3}}</td>
+					<td id="autreVoeux">{{autreVoeux}}</td>
+					<td id="aucunVoeuxRetenu">{{aucunVoeuxRetenu}}</td>
+					<td id="noCorres">{{noCorres}}</td>
+					<td id="exclue">{{exclue}}</td>
+				</tr>
+			</tbody>
+
+		</table>
+		
+		
+		
+		
+	
+	<!--Tableau des étudiants -->
+	<table id="table" class="table table-hover ">
+		<thead>
+			<tr>
+				<th>ID</th>
+				<th>Nom</th>
+				<th>Prénom</th>
+				<th>Année</th>
+				<th>Moyenne</th>
+				<th>Changement</th>
+				<th>Placement</th>
+				<th>Verrouiller</th>
+				<th>Valider RI</th>
+				<th>Exclure de l'algo</th>
+				<th>Acceder</th>
+			</tr>
+		</thead>
+		<tbody>
+		
+		<!-- couleur de la ligne en fonction du placement -->
+	  {% for i, user in listStudents %}
+			<tr  id="{{user.id}}"  >
+			
+			{#
+			{%if user.excludeFromAlgo%}
+	  			<tr id="{{user.id}}" style="background-color:#BFFFF6;" title="Exclue de l'algorithme">
+				{%set exclue = exclue + 1%}					
+			{% elseif user.placement is null and user.wishes[0] is defined %}
+				<tr id="{{user.id}}" style="background-color:#FE5F64;" title="Aucun voeux retenu">
+				{%set aucunVoeuxRetenu = aucunVoeuxRetenu + 1%}
+			{%elseif user.placement is null %}
+				<tr id="{{user.id}}">
+			{% else %}
+				{% set placement = user.placement %}
+				{% set priority = 0 %}
+				{% for  wish in user.wishes %}
+					{%if placement.mobilityPeriod == wish.mobilityPeriod and placement.place == wish.place and wish.year == placement.year %}
+						{% set priority = wish.priority%}
+					{%endif%}
+				{% endfor %}
+				
+				{%if not(placement.mobilityPeriod in placement.place.mobilityPeriod) %}
+					{% set priority = 0 %}				
+				{%endif%}
+
+				{%if priority == 1%}
+					<tr id="{{user.id}}" style="background-color:#CDFF9A;" title="1er voeux">
+					{%set voeux1 = voeux1 + 1%}
+				{%elseif priority == 2%}
+					<tr id="{{user.id}}" style="background-color:#FDFD7C;" title="2eme voeux">		
+					{%set voeux2 = voeux2 + 1%}					
+				{%elseif priority == 3%}
+					<tr id="{{user.id}}" style="background-color:#FFCB7E;" title="3eme voeux">		
+					{%set voeux3 = voeux3 + 1%}										
+				{%elseif priority == 0%}
+					<tr id="{{user.id}}" style="background-color:#FF2121;" title="Ne correspond à aucun voeux">	
+					{%set noCorres = noCorres + 1%}															
+				{%else%}
+					<tr id="{{user.id}}" style="background-color:#FFA092;" title="Autre voeux">		
+					{%set autreVoeux = autreVoeux + 1%}																				
+				{%endif%}
+			{%endif%}
+			#}
+			
+			
+			
+			{%if user.excludeFromAlgo%}
+	  			<td  style="background-color:#BFFFF6;" title="Exclue de l'algorithme">
+				{%set exclue = exclue + 1%}					
+			{% elseif user.placement is null and user.wishes[0] is defined %}
+				<td  style="background-color:#FE5F64;" title="Aucun voeux retenu">
+				{%set aucunVoeuxRetenu = aucunVoeuxRetenu + 1%}
+			{%elseif user.placement is null %}
+				<td >
+			{% else %}
+				{% set placement = user.placement %}
+				{% set priority = 0 %}
+				{% for  wish in user.wishes %}
+					{%if placement.mobilityPeriod == wish.mobilityPeriod and placement.place == wish.place and wish.year == placement.year %}
+						{% set priority = wish.priority%}
+					{%endif%}
+				{% endfor %}
+				
+				{%if not(placement.mobilityPeriod in placement.place.mobilityPeriod) %}
+					{% set priority = 0 %}				
+				{%endif%}
+
+				{%if priority == 1%}
+					<td  style="background-color:#CDFF9A;" title="1er voeux">
+					{%set voeux1 = voeux1 + 1%}
+				{%elseif priority == 2%}
+					<td  style="background-color:#FDFD7C;" title="2eme voeux">		
+					{%set voeux2 = voeux2 + 1%}					
+				{%elseif priority == 3%}
+					<td style="background-color:#FFCB7E;" title="3eme voeux">		
+					{%set voeux3 = voeux3 + 1%}										
+				{%elseif priority == 0%}
+					<td  style="background-color:#FF2121;" title="Ne correspond à aucun voeux">	
+					{%set noCorres = noCorres + 1%}															
+				{%else%}
+					<td  style="background-color:#FFA092;" title="Autre voeux">		
+					{%set autreVoeux = autreVoeux + 1%}																				
+				{%endif%}
+			{%endif%}
+				{{i}}</td>
+				
+				
+				
+				<td>{{user.name}}</td>
+				<td>{{user.firstName}}</td>
+				<td>{{user.yearStudy}}</td>
+
+				{% if user.mean != -1 %}
+            		<td>{{user.mean}}</td>
+            	{% else %}
+            		<td>
+            			<span class="glyphicon glyphicon-warning-sign" aria-hidden="true"></span>
+            			Pas de moyenne
+            		</td>
+    			{% endif %}
+				
+				
+				{% if  placementIsChange[i] is defined and placementIsChange[i] %}
+					<td style="background-color:#F2050D">Oui</td>
+				{% else %}
+					<td>Non</td>
+				{% endif %}
+
+				
+				
+				
+				{% set test = true %}
+
+				<!-- S'il y as un placement et selon ce placement on affiche pas les mêmes actions -->
+				{% if not user.placement is null %}
+							<td>
+								<a class="btn btn-default" role="button" href=" {{ path('mb_university_admin',{'university' :  user.placement.place.university.id}) }}">
+									{{ user.placement.place.university.name }}  {{ user.placement.mobilityPeriod.type }}
+								</a>
+							</td>
+					{% if  user.placement.temp == 2 %}
+
+							<td>
+								<form method="POST" action="{{ path('mb_affect_this') }}">
+									<input type="hidden" name="anchor" value="{{user.id}}">
+									<input type="hidden" name="id" value="{{user.placement.id}}">
+									<input type="submit" class="btn btn-primary" value="Verrouiller">
+								</form>
+							</td>
+					{%endif%}
+
+					{% if user.placement.temp == 1  %}
+							<td>
+								<form method="POST" action="{{ path('mb_affect_this') }}">
+									<input type="hidden" name="anchor" value="{{user.id}}">
+									<input type="hidden" name="id" value="{{user.placement.id}}">
+									<input type="submit" class="btn btn-warning" value="Déverrouiller">
+								</form>
+							</td>
+							
+					{%endif%}
+					
+					{% if user.placement.temp == 1 or  user.placement.temp == 2 %}
+							<td>
+								<form method="POST" action="{{ path('mb_affect_delete_validate_placement') }}">
+									<input type="hidden" name="anchor" value="{{user.id}}">
+									<input type="hidden" name="id" value="{{user.placement.id}}">
+									<button class="submit btn btn-success" name="action" value="validate">Valider RI</button>
+								</form>
+							</td>
+					{%endif%}
+					
+					{% if user.placement.temp == 0  %}
+							<td>--</td>
+							<td>
+								<form method="POST" action="{{ path('mb_affect_delete_validate_placement') }}">
+									<input type="hidden" name="anchor" value="{{user.id}}">
+									<input type="hidden" name="id" value="{{user.placement.id}}">
+									<button class="submit btn btn-danger" name="action" value="delete" onclick="return confirm('Êtes-vous sûr?\nLe placement sera supprimé avec tout les Learning agreement associés')">Retirer RI</button>
+								</form>
+							</td>
+					{%endif%}
+
+					{% set test = false %}
+				{% endif %}
+
+				{% if test %}
+					{% if user.excludeFromAlgo %}
+							<td>
+								Exclue de l'algorithme
+							</td>
+							<td>--</td>
+							<td>--</td>
+					{% elseif user.wishes[0] is defined %}
+							<td>
+								Aucun voeu retenu
+							</td>
+							<td>--</td>
+							<td>--</td>
+					{% else %}
+							<td>
+								Aucun voeu fait
+							</td>
+							<td>--</td>
+							<td>--</td>
+					{%endif%}
+				{%endif%}
+				
+				<td>
+					<form method="POST" action="{{ path('mb_exclude_him') }}">
+						<input type="hidden" name="id" value="{{user.id}}">
+						{%if user.excludeFromAlgo %}
+							<button class="submit btn btn-success" name="action" value="delete">Remettre</button>						
+						{%else%}
+							<button class="submit btn btn-danger" name="action" onclick="return confirm('Êtes-vous sûr?\nL\'étudiant ne sera plus pris en compte dans l\'algorithme, sauf pour le classement, tout placement qu\'il aurai sera supprimé.')" value="delete">Exclure</button>						
+						{%endif%}
+					</form>
+				</td>
+				
+				<td><a class="btn btn-default" role="button" href=" {{ path('mb_home_page_user_admin',{'student' : user.id}) }}">Accéder à l'étudiant</a></td>
+			</tr>
+		{% endfor %}
+	 
+	 		</tbody>
+	 </table>
+	 
+	 
+	 <!-- LEGENDE + STATS-->
+			<table class="table table-hover table-bordered">
+			<thead>
+				<tr>
+					<th>1er voeux</th>
+					<th>2eme voeux</th>
+					<th>3eme voeux</th>
+					<th>Autre voeux</th>
+					<th>Aucun voeux retenu</th>
+					<th>Ne correspond à aucun voeux</th>
+					<th>Exclue de l'algorithme</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td style="background-color:#CDFF9A;"></td>
+					<td style="background-color:#FDFD7C;"></td>
+					<td style="background-color:#FFCB7E;"></td>
+					<td style="background-color:#FFA092;"></td>
+					<td style="background-color:#FE5F64;"></td>
+					<td style="background-color:#FF2121;"></td>
+					<td style="background-color:#BFFFF6;"></td>
+				</tr>
+				<tr>
+					<td>{{voeux1}}</td>
+					<td>{{voeux2}}</td>
+					<td>{{voeux3}}</td>
+					<td>{{autreVoeux}}</td>
+					<td>{{aucunVoeuxRetenu}}</td>
+					<td>{{noCorres}}</td>
+					<td>{{exclue}}</td>
+				</tr>
+			</tbody>
+
+		</table>
+	 
+	 
+</div>
+
+	 	 
+<script src="{{ app.request.getSchemeAndHttpHost() ~ asset('js/tablefilter/tablefilter.js') }}"></script>
+
+<script data-config>
+    var filtersConfig = {
+        base_path: "{{ app.request.getSchemeAndHttpHost() ~ asset('js/tablefilter/') }}",
+        alternate_rows: true,
+        rows_counter: true,
+        btn_reset: true,
+        loader: true,
+        status_bar: true,
+        mark_active_columns: true,
+		col_number_format: [
+		'US', null, null,
+		'US', 'US', null,
+		null,null,null,null,null
+		],
+        extensions:[{ name: 'sort' }]
+		
+    };
+
+    var tf = new TableFilter('table', filtersConfig);
+    tf.init();
+
+</script>
+
+<script>
+//set des légendes du haut
+	var element = document.getElementById("voeux1");
+	element.innerHTML = {{voeux1}};
+
+	element = document.getElementById("voeux2");
+	element.innerHTML = {{voeux2}};
+	
+	
+	element = document.getElementById("voeux3");
+	element.innerHTML = {{voeux3}};
+	
+	
+	element = document.getElementById("autreVoeux");
+	element.innerHTML = {{autreVoeux}};
+	
+	
+	element = document.getElementById("aucunVoeuxRetenu");
+	element.innerHTML = {{aucunVoeuxRetenu}};
+	
+	element = document.getElementById("noCorres");
+	element.innerHTML = {{noCorres}};
+
+	element = document.getElementById("exclue");
+	element.innerHTML = {{exclue}};
+	
+	//Permet de décalé la page
+	{%if not anchor is null%}
+		var bodyRect = document.body.getBoundingClientRect();
+		var element = document.getElementById({{anchor}});
+		var elemRect = element.getBoundingClientRect();
+		offset   = elemRect.top - bodyRect.top -51;
+		
+		//test si firefox
+		var isFirefox = typeof InstallTrigger !== 'undefined';
+		if(isFirefox){
+			offset-=51*3;
+		}
+		
+		scrollTo(0,offset);
+	{%endif%}
+	
+</script>	
+	 
+
+{% endblock %}

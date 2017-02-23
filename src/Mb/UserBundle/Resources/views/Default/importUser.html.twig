@@ -1,0 +1,85 @@
+{% extends "::base.html.twig" %}
+
+
+ {# {% block page_title %}{{ parent() }} - Ajouter un lot d'étudiants depuis le LDAP{% endblock %}  #}
+
+{% block content %}
+
+	 <div class="container">
+	 
+		{% for message in app.session.flashbag.get('info') %}
+			<div class="alert alert-info">{{ message }}</div>
+		{% endfor %}
+		
+		{% if app.session.flashbag.has('error') %}
+			<div class="alert alert-danger">
+				{% for message in app.session.flashbag.get('error') %}
+					<p>{{ message }}</p>
+				{% endfor %}
+			</div>    
+		{% endif %}
+		
+
+
+		<h3> Ajouter plusieurs étudiants </h3>
+
+		<p class="text-center">
+			<strong>Format :</strong> Téléversez votre fichier CSV sous le format suivant.<br />
+			<strong>En-tête :</strong> Email ou Numéro étudiant Insa[<strong style="color:red;">;</strong> moyenne (format anglais: 3.5 ou français: 3,5)]<br/>
+			<strong>Toutes vos lignes doivent avoir le même nombre de colomne</strong><br/>
+			<ul>
+				<li>Ajouter un étudiant par ligne en ajoutant un email ou Numéro étudiant Insa et une moyenne pour l'étudiant.</li>
+				<li>Un étudiant déjà entré dans la base sur la même ligne qu'une moyenne met à jour la moyenne de l'étudiant.</li>
+		</p>
+
+		<hr />
+
+		<div class="row">
+			<div class="col-lg-2">
+				{{ form_start(formCSV, {'method': 'post'}) }}
+					<div class="form-group">
+						{{ form_widget(formCSV) }}
+						<button type="submit" class="btn btn-default">Envoyer</button>
+					</div>
+				{{ form_end(formCSV) }}
+			</div>
+		</div>
+
+		<br />
+		<hr />
+		<br />
+
+
+		<h3> Ajouter juste une personne </h3>
+
+		<div class="row">
+			<div class="col-lg-4">
+				{{ form_start(formOne, {'method': 'post'}) }}
+					<div class="form-group">
+						{{ form_widget(formOne) }}
+
+						<button type="submit" class="btn btn-default">Envoyer</button>
+					</div>
+				{{ form_end(formOne) }}
+			</div>
+		</div>
+		
+		
+		{% if is_granted('ROLE_SUPER_ADMIN') %}
+			<h3> Ajouter un Admin </h3>
+
+			<div class="row">
+				<div class="col-lg-4">
+				{{ form_start(formAdmin, {'method': 'post'}) }}
+						<div class="form-group">
+							{{ form_widget(formAdmin) }}
+
+							<button type="submit" class="btn btn-default">Envoyer</button>
+						</div>
+				{{ form_end(formAdmin) }}
+				</div>
+			</div>
+		
+		{%endif%}
+	</div>
+{% endblock %}

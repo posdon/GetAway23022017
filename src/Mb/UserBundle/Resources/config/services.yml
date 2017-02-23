@@ -1,0 +1,4 @@
+services:
+    mb.ldap.ldap_manager:
+        class: Mb\UserBundle\Ldap\LdapManager
+        arguments: ['@fr3d_ldap.ldap_driver', '@fr3d_ldap.user_manager', '%fr3d_ldap.ldap_manager.parameters%', '@doctrine.orm.default_entity_manager']

@@ -1,0 +1,64 @@
+{% extends "::base.html.twig" %}
+
+
+ {# {% block page_title %}{{ parent() }} - Ajouter un lot d'université{% endblock %}  #}
+
+{% block content %}
+<div class="container">
+
+    
+    <div class="row">
+        <div class="col-md-4">
+            <form action="" method="post" {{ form_enctype(form) }}>
+                 <div class="form-group">
+
+                    {{ form_widget(form) }}
+                    <input type="submit" />
+                </div>
+            </form>
+        </div>  
+        <div class="col-md-8">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h4>Format</h4>
+                </div>
+                <div class="panel-body"  style="margin-bottom: 20px;">
+                    <p>
+                        <strong>Format :</strong> Nom,Pays,nombre de place,[Liste de semestre]
+                    </p>
+                    <p>
+                        La colonne [Liste de semestre] doit être remplie si vous souhaitez restreindre le semestre d'étude, ou laissé vide sinon. 
+                    </p>
+                    <p>
+                        Pour ajouter un double diplôme, insérer le sur une nouvelle ligne, de manière indépendante des semestres d'étude
+                    </p>
+                    <p>
+                        Le quota -1 correspond à un quota illimité
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <p style="text-align: center; margin-bottom: 20px;"> 
+    	<strong>Exemple : </strong>
+    	<table class="table table-bordered">
+    		<tr>
+    			<td> R I T </td> <td> U S A </td>  <td>2</td> <td>S9</td> 
+            </tr>
+            <tr>
+                <td> R I T </td> <td> U S A </td>  <td>2</td>  <td>S8</td>  <td>S9</td> 
+            </tr>
+            <tr>
+                <td> T U D </td> <td> Germany </td>  <td>3</td> <td></td> <td></td>
+            </tr>
+            <tr>
+                <td> T U D </td> <td> Germany </td> <td>-1</td> <td> Double diplôme </td>
+            </tr>
+
+
+    	</table>
+    </p>
+</div>
+
+{% endblock %}

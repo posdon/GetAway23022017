@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mobilité à l'international</title>
+
+    {% block stylesheets %}
+    {% stylesheets filter='cssrewrite, ?yui_css'
+    'assets/bootstrap/css/bootstrap.css'
+    'assets/bootstrap/css/bootstrap-theme.css'
+    'assets/css/design.css'
+    'js/autocomplete/awesomplete.css' %}
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ asset_url }}" type="text/css" />
+    {% endstylesheets %}
+    {% endblock %}
+
+
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+        {% javascripts filter='?yui_js'
+        'assets/bootstrap/js/html5shiv.min.js'
+        'assets/bootstrap/js/respond.min.js' %}
+        <script type="text/javascript" src="{{ asset_url }}"></script>
+        {% endjavascripts %}
+        <![endif]-->
+    </head>
+
+    <body role="document">
+        <!-- Fixed navbar -->
+        <nav class="navbar navbar-default navbar-fixed-top">
+            <div class="container-fluid">
+                <div class="navbar-header">
+                  <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#menu-1" aria-expanded="false">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                {% if app.user is not null and is_granted("IS_AUTHENTICATED_REMEMBERED") %}
+                <a class="navbar-brand" title="Accueil" href="{{ path('mb_main') }}"><span class="glyphicon glyphicon-home" /></a>
+                {% endif %}  
+            </div>
+
+            <div class="collapse navbar-collapse" id="menu-1">
+                <ul class="nav navbar-nav">      
+                    {% if app.user is not null and is_granted('ROLE_ADMIN') %}
+                    <li><a title="Documentation" href="{{ asset('/doc/RAPPORT.pdf') }}">Documentation utilisateur</a></li>
+
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Universités<span class="caret"></span></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="{{ path('Mb_univ_list') }}">Liste des universités partenaires</a></li>
+                            <li><a href="{{ path('mb_places_list_admin') }}">Modifier/Ajouter des jetons/universités</a></li>
+                            <li><a href="{{ path('Mb_univ_import') }}" >Ajouter plusieurs universités d'un coup</a></li>
+                            {% block menu_universite %}
+                            {% endblock %}
+                        </ul>
+                    </li>
+
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Etudiants<span class="caret"></span></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="{{ path('mb_algo') }}">Gérer les voeux</a></li>
+                            <li><a href="{{ path('mb_run_algo') }}">Gérer les affectations</a></li>
+                            <li><a href="{{ path('mb_users_import') }}">Ajouter des étudiants</a></li>
+                            <li><a href="{{ path('mb_jury') }}">Fiche jury</a></li>
+                            {% block menu_etudiant %}
+                            {% endblock %}
+                        </ul>
+                    </li>
+                    {% block menu_autre %}
+                    {% endblock %}
+                    {% endif %}
+                </ul>
+                {% if app.user is not null and is_granted("IS_AUTHENTICATED_REMEMBERED") %}
+                <div class="navbar-right">
+                    <p class="navbar-text">Connecté en tant que {{ app.user.name }} {{ app.user.firstName }}</p>
+                    <a class="btn btn-danger navbar-btn" href="{{ path('logout') }}">
+                        <i class="glyphicon glyphicon-off"></i>Déconnexion</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </nav>
+
+        <div class="container">
+            {% for flashMessage in app.session.flashbag.get('success') %}
+                <div class="alert alert-success fade in">
+                      <a href="#" class="close" data-dismiss="alert" aria-label="close"><span class="glyphicon glyphicon-remove"></span></a>
+                    {{ flashMessage }}
+                </div>
+                {% endfor %}
+
+                {% for flashMessage in app.session.flashbag.get('info') %}
+                <div class="alert alert-info fade in">
+                  <a href="#" class="close" data-dismiss="alert" aria-label="close"><span class="glyphicon glyphicon-remove"></span></a>
+                    {{ flashMessage }}
+                </div>
+                {% endfor %}
+
+                {% for flashMessage in app.session.flashbag.get('error') %}
+                <div class="alert alert-danger fade in">
+                  <a href="#" class="close" data-dismiss="alert" aria-label="close"><span class="glyphicon glyphicon-remove"></span></a>
+                    {{ flashMessage }}
+                </div>
+                {% endfor %}
+
+                {% for flashMessage in app.session.flashbag.get('warning') %}
+                <div class="alert alert-warning fade in">
+                  <a href="#" class="close" data-dismiss="alert" aria-label="close"><span class="glyphicon glyphicon-remove"></span></a>
+                    {{ flashMessage }}
+                </div>
+                {% endfor %}
+        </div>
+        <div>
+            {% block content %}{% endblock %}
+        </div>
+
+        {% block javascripts %}
+        <script type="text/javascript" src="{{ asset('assets/bootstrap/js/jquery.min.js') }}"></script>
+        <script type="text/javascript" src="{{ asset('assets/bootstrap/js/bootstrap.min.js') }}"></script>
+        <script type="text/javascript" src="{{ asset('assets/bootstrap/js/docs.js') }}"></script>
+        <script type="text/javascript" src="{{ asset('assets/bootstrap/js/ie10-viewport-bug-workaround.js') }}"></script>
+        {% endblock %}
+    </body>
+    </html>

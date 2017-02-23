@@ -1,0 +1,161 @@
+{% extends "::base.html.twig" %}
+
+{#{% block page_title %}Accueil{% endblock %}#}
+
+{% block content %}
+<div class="container">
+
+ 
+	
+<h1>Liste des Universités</h1></br>
+
+
+{% if not student is null%}
+<!-- VOEUX -->
+<table class="table table-hover">
+    <tr>
+        <th>Classement</th>
+        <th>Université</th>
+        <th>Semestre de départ</th>
+        <th>Pays</th>
+		<!--Si déjà affecté avec temp 0, on ne peux pas modifier les voeux -->
+        {% if (is_granted('ROLE_ADMIN') or not(student.department.bolt) ) and  (student.placement is null or student.placement.temp != 0)%}
+            <th>Changer l'ordre des vœux</th>
+            <th>Supprimer</th>
+			{% if is_granted('ROLE_ADMIN') and  (student.placement is null or student.placement.temp != 0)%}
+				<th>Affecter</th>
+			 {% endif %}
+        {% endif %}
+    </tr>
+    {% for iterator, wish in student.wishes %}
+        <tr>
+            <td>{{wish.priority}}</td>
+            <td>
+				<a class="btn btn-default" role="button" href=" {{ path('mb_university_student',{'university' :  wish.place.university.id}) }}">			
+					{{wish.place.university.name}}
+				</a>
+			</td>
+            <td>{{wish.mobilityPeriod.type}}</td>
+            <td>{{wish.place.university.country.name}}</td>
+            {% if (is_granted('ROLE_ADMIN') or not(student.department.bolt) ) and  (student.placement is null or student.placement.temp != 0)%}
+                <td>
+                    <ul class="nav nav-pills">
+                        <li role="presentation">
+                            <form method="POST" action="{{ path('mb_home_page_user_wish_up') }}">
+                                <input type="hidden" name="id" value="{{wish.id}}">
+                                <button class="btn btn-default"><i class="glyphicon glyphicon-arrow-up"></i>
+                                </button>
+                            </form>
+                        </li>
+                        <li role="presentation">
+                            <form method="POST" action="{{ path('mb_home_page_user_wish_down') }}">
+                                <input type="hidden" name="id" value="{{wish.id}}">
+                                <button class="btn btn-default"><i class="glyphicon glyphicon-arrow-down"></i>
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </td>
+                <td>
+                    <form method="POST" action="{{ path('mb_home_page_user_delete') }}">
+                        <input type="hidden" name="id" value="{{wish.id}}">
+                        <button class="btn btn-danger"><i class="glyphicon glyphicon-trash"></i></button>
+                    </form>
+                </td>
+				 {% if is_granted('ROLE_ADMIN') and  (student.placement is null or student.placement.temp != 0)%}
+					<td>
+						<form method="POST" action="{{ path('mb_affect_wish') }}">
+							<input type="hidden" name="id" value="{{wish.id}}">
+							<input type="hidden" name="userid" value="{{student.id}}">
+							<input type="submit" class="btn btn-primary" value="Affecter/Désaffecter">
+						</form>
+					</td>
+				{% endif %}
+        {% endif %}
+        </tr>
+    {% endfor %}
+</table>
+{%endif%}
+
+
+
+{% if app.session.flashbag.has('error') %}
+        <div class="alert alert-danger">
+            {% for message in app.session.flashbag.get('error') %}
+                <p>{{ message }}</p>
+            {% endfor %}
+        </div>    
+ {% endif %}
+
+
+
+	{% if is_granted('ROLE_ADMIN') %}
+		{% if student != null %}
+			<a class="btn btn-default" role="button" href=" {{ path('mb_home_page_user_admin',{'student' : student.id}) }}">Accéder à l'étudiant</a>
+		{% endif %}
+	{% endif %}
+
+	<table id="table" class="table-hover">
+		<thead>
+			<tr>
+				<th>Université</th>
+				<th>Pays</th>
+				{% if student != null %}
+					<th>Ajouter</th>
+				{% endif %}
+			</tr>
+		</thead>
+		<tbody>
+			{% for iterator, univ in listUnivs %}
+				<tr>
+					<td>			
+						<a class="btn btn-default" role="button" href=" {{ path('mb_university_student',{'university' :  univ.id}) }}">					
+							{{univ.name}}		
+						</a>
+					</td>
+					<td>{{univ.country.name}}</td>
+					{% if student != null %}
+						<td>
+							<form method="POST" action="{{ path('Mb_univ_add_wish') }}">
+								<input type="submit" class="btn btn-primary" value="Add" />
+								<select name ="id" title="Période de mobilité" id="mbPer">
+									{% for iterator2, place in univ.places%}
+										{% if place.places != 0 and place.department == app.user.department %}
+											{% for iterator3, mobilityPeriod in place.mobilityPeriod%}
+												<option  value="{{mobilityPeriod.id}} {{place.id}} {{student.id}}">{{mobilityPeriod.type}}</option>
+											{%endfor%}
+										{% endif %}		
+									{%endfor%}
+								</select>
+							</form>
+						</td>
+					{% endif %}
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+</div>
+
+
+ 
+<script src="{{ app.request.getSchemeAndHttpHost() ~ asset('js/tablefilter/tablefilter.js') }}"></script>
+
+<script data-config>
+    var filtersConfig = {
+        base_path: "{{ app.request.getSchemeAndHttpHost() ~ asset('js/tablefilter/') }}",
+        alternate_rows: true,
+        rows_counter: true,
+        btn_reset: true,
+        loader: true,
+        status_bar: true,
+        mark_active_columns: true,
+        extensions:[{ name: 'sort' }]
+		
+    };
+
+    var tf = new TableFilter('table', filtersConfig);
+    tf.init();
+
+</script>	
+
+{% endblock %}

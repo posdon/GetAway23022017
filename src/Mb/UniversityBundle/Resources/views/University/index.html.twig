@@ -1,0 +1,187 @@
+{% extends "::base.html.twig" %}
+
+
+{% block content %}
+<div class="container">
+	<h1>{{university.name}} - {{university.country.name}}</h1>
+	
+	
+	<h2>Types de départs possibles</h2>
+	<table id="table" class="table-hover">
+		<thead>
+			<tr>
+				<th>Département</th>
+				<th>Période de départ</th>
+				<th>Nombre de place</th>
+				{% if is_granted('ROLE_ADMIN') %}
+					<th>Nombre de places restantes</th>
+				{% endif %}
+			</tr>
+		</thead>
+		<tbody>
+			 {% for i, place in university.places %}
+				{% if place.printFormPlaces != 0 %}
+					<tr>
+						{% if place.department.name == "ALL" %}
+							<td>Commun à tout les départements</td>
+						{%else%}
+							<td>{{place.department.name}}</td>
+						{%endif%}
+
+						
+						
+						<td>
+						{% for i, period in place.mobilityPeriod %}
+							{{period.type}}
+						{% endfor %}
+						</td>
+						
+						
+						{% if place.printFormPlaces == -1 %}
+							<td>Pas de limites</td>
+						{%else%}
+							<td>{{place.printFormPlaces}}</td>
+						{%endif%}
+						
+						{% if is_granted('ROLE_ADMIN') and app.user.department.name == place.department.name %}						
+							{% if place.printFormPlaces == -1 %}
+								<td>Pas de limites</td>
+							{%else%}
+								<td>{{place.placesRest}}</td>
+							{%endif%}
+						{% endif %}
+						
+						
+					</tr>
+				{%endif%}
+			{% endfor %}
+		
+		</tbody>
+	</table>	
+	
+	
+	
+	<h2>Etudiants ayant fait un voeux dans cette université</h2>
+		<table id="table2" class="table-hover">
+			 <thead>
+				<tr>
+					<th>Nom</th>
+					<th>Prénom</th>
+					<th>Année</th>
+					{% if is_granted('ROLE_ADMIN') %}<th>Moyenne</th>{%endif%}
+					<th>Semestre</th>
+					<th>Prioritée</th>
+					{% if is_granted('ROLE_ADMIN') %}<th>Acceder</th>{%endif%}
+				</tr>
+			</thead>
+			<tbody>
+				{% for i, user in usersWish %}
+					<tr>
+						<td>{{user.name}}</td>
+						<td>{{user.firstName}}</td>
+						<td>{{user.yearStudy}}</td>
+						{% if is_granted('ROLE_ADMIN') %}
+							{% if user.mean != -1 %}
+								<td>{{user.mean}}</td>
+							{% else %}
+								<td>
+									<span class="glyphicon glyphicon-warning-sign" aria-hidden="true"></span>
+									Pas de moyenne
+								</td>
+							{% endif %}
+						{%endif%}
+							{% for i, wish in user.wishes %}
+								{% if wish.place.university.id == university.id and wish.year == year %}
+									<td>{{ wish.mobilityPeriod.type }}</td>
+									<td>{{ wish.priority }}</td>
+								{% endif %}
+							{% endfor %}
+						{% if is_granted('ROLE_ADMIN') %}
+							<td><a class="btn btn-default" role="button" href=" {{ path('mb_home_page_user_admin',{'student' : user.id}) }}">Acceder</a></td>
+						{% endif %}
+					</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+		
+		
+	<h2>Etudiants étant allé ou allant dans cette université</h2>
+		<table id="table3" class="table-hover">
+			 <thead>
+				<tr>
+					<th>Nom</th>
+					<th>Prénom</th>
+					{% if is_granted('ROLE_ADMIN') %}
+						<th>Moyenne</th>	
+					{% endif %}
+					<th>Département</th>										
+					<th>Année du voeux</th>
+					<th>Semestre</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for i, user in usersHadGo %}
+					<tr>
+						<td>{{user.name}}</td>
+						<td>{{user.firstName}}</td>
+						{% if is_granted('ROLE_ADMIN') %}
+							{% if user.mean != -1 %}
+								<td>{{user.mean}}</td>
+							{% else %}
+								<td>
+									<span class="glyphicon glyphicon-warning-sign" aria-hidden="true"></span>
+									Pas de moyenne
+								</td>
+							{% endif %}
+						{% endif %}
+						<td>{{user.department.name}}</td>			
+						{% if not user.placement is null %}
+							{% if user.placement.place.university.id == university.id  %}
+								<td>{{user.placement.year.year}}</td>
+								<td>{{ user.placement.mobilityPeriod.type }}</td>
+							{% endif %}
+						{% endif %}
+					</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	
+		
+
+</div>  
+
+
+	 
+	 
+<script src="../../../js/tablefilter/tablefilter.js"></script>
+
+<script data-config>
+    var filtersConfig = {
+        base_path: '../../../js/tablefilter/',
+        alternate_rows: true,
+        rows_counter: true,
+        btn_reset: true,
+        loader: true,
+        status_bar: true,
+        mark_active_columns: true,
+		col_number_format: [
+		null, null, 'US',
+		'US', null, null,
+		null,null,null,null,null
+		],
+        extensions:[{ name: 'sort' }]
+    };
+
+    var tf = new TableFilter('table', filtersConfig);
+    tf.init();
+	
+	var tf2 = new TableFilter('table2', filtersConfig);
+    tf2.init();
+
+	var tf3 = new TableFilter('table3', filtersConfig);
+    tf3.init();
+
+</script>	 
+
+
+{% endblock %}
